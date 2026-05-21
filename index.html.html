@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Houston Cultural Districts Explorer</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700&f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root, [data-theme="light"] {
+    --color-bg: #f7f6f2;
+    --color-surface: #f9f8f5;
+    --color-surface-2: #fbfbf9;
+    --color-surface-offset: #f3f0ec;
+    --color-divider: #dcd9d5;
+    --color-border: #d4d1ca;
+    --color-text: #28251d;
+    --color-text-muted: #7a7974;
+    --color-text-faint: #bab9b4;
+    --color-primary: #01696f;
+    --color-primary-hover: #0c4e54;
+    --color-primary-highlight: #cedcd8;
+    --color-gold: #d19900;
+    --color-orange: #da7101;
+    --color-error: #a12c7b;
+    --color-blue: #006494;
+    --color-purple: #7a39bb;
+    --color-success: #437a22;
+    --color-notification: #a13544;
+    --shadow-sm: 0 1px 2px oklch(0.2 0.01 80 / 0.06);
+    --shadow-md: 0 4px 12px oklch(0.2 0.01 80 / 0.08);
+    --shadow-lg: 0 12px 32px oklch(0.2 0.01 80 / 0.12);
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-full: 9999px;
+    --font-display: "Cabinet Grotesk", sans-serif;
+    --font-body: "Satoshi", sans-serif;
+    --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+    --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+    --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+    --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+    --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+    --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+    --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
+    --space-12: 3rem; --space-16: 4rem;
+    --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    --map-bg: #e8e4dc;
+  }
+  [data-theme="dark"] {
+    --color-bg: #171614;
+    --color-surface: #1c1b19;
+    --color-surface-2: #201f1d;
+    --color-surface-offset: #1d1c1a;
+    --color-divider: #262523;
+    --color-border: #393836;
+    --color-text: #cdccca;
+    --color-text-muted: #797876;
+    --color-text-faint: #5a5957;
+    --color-primary: #4f98a3;
+    --color-primary-hover: #227f8b;
+    --color-primary-highlight: #313b3b;
+    --color-gold: #e8af34;
+    --color-orange: #fdab43;
+    --color-error: #d163a7;
+    --color-blue: #5591c7;
+    --color-purple: #a86fdf;
+    --color-success: #6daa45;
+    --color-notification: #dd6974;
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.2);
+    --shadow-md: 0 4px 12px oklch(0 0 0 / 0.3);
+    --shadow-lg: 0 12px 32px oklch(0 0 0 / 0.4);
+    --map-bg: #242220;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body, sans-serif);
+    font-size: var(--text-base);
+    color: var(--color-text);
+    background: var(--color-bg);
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 340px 1fr;
+    grid-template-areas: "header header" "sidebar map";
+    overflow: hidden;
+    height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { cursor: pointer; background: none; border: none; font: inherit; color: inherit; }
+  a { color: inherit; }
+  img { display: block; max-width: 100%; }
+
+  /* Header */
+  header {
+    grid-area: header;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-3) var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    box-shadow: var(--shadow-sm);
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-shrink: 0;
+  }
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: var(--text-lg);
+    letter-spacing: -0.02em;
+    color: var(--color-text);
+    line-height: 1.1;
+  }
+  .logo-sub {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .header-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--color-divider);
+    flex-shrink: 0;
+  }
+  .header-stats {
+    display: flex;
+    gap: var(--space-6);
+    flex: 1;
+  }
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+  .stat-pill strong {
+    color: var(--color-text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-dot {
+    width: 8px; height: 8px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    transition: background var(--transition), color var(--transition);
+  }
+  .btn-icon:hover {
+    background: var(--color-surface-offset);
+    color: var(--color-text);
+  }
+  .btn-icon svg { width: 18px; height: 18px; }
+
+  /* Sidebar */
+  aside {
+    grid-area: sidebar;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 50;
+  }
+  .sidebar-header {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+    border-bottom: 1px solid var(--color-divider);
+    flex-shrink: 0;
+  }
+  .sidebar-section-title {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+  }
+  .search-box {
+    position: relative;
+  }
+  .search-box input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-8);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    transition: border-color var(--transition), box-shadow var(--transition);
+    outline: none;
+  }
+  .search-box input::placeholder { color: var(--color-text-faint); }
+  .search-box input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px oklch(from var(--color-primary) l c h / 0.15);
+  }
+  .search-icon {
+    position: absolute;
+    left: var(--space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-faint);
+    pointer-events: none;
+  }
+  .search-icon svg { width: 14px; height: 14px; }
+
+  .filter-section {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+    flex-shrink: 0;
+  }
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition);
+    user-select: none;
+  }
+  .chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--color-primary-highlight);
+  }
+  .chip.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+  .chip-dot {
+    width: 7px; height: 7px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+  }
+
+  .results-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-2);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+  .results-header {
+    padding: var(--space-2) var(--space-2) var(--space-1);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .result-card {
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: background var(--transition), box-shadow var(--transition);
+    margin-bottom: var(--space-1);
+    border: 1px solid transparent;
+  }
+  .result-card:hover {
+    background: var(--color-surface-2);
+    border-color: var(--color-border);
+  }
+  .result-card.selected {
+    background: var(--color-primary-highlight);
+    border-color: var(--color-primary);
+  }
+  .result-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
+  }
+  .result-name {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.3;
+  }
+  .result-type-badge {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .result-district {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-1);
+  }
+  .result-district-dot {
+    width: 6px; height: 6px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+  }
+  .result-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-faint);
+  }
+
+  /* Map area */
+  #map-container {
+    grid-area: map;
+    position: relative;
+    overflow: hidden;
+  }
+  #map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Detail panel */
+  .detail-panel {
+    position: absolute;
+    right: var(--space-4);
+    top: var(--space-4);
+    width: 320px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+    transition: opacity 250ms ease, transform 250ms ease;
+  }
+  .detail-panel.visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+  .detail-header {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+    position: relative;
+  }
+  .detail-type-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .detail-close {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 28px; height: 28px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    transition: background var(--transition), color var(--transition);
+  }
+  .detail-close:hover {
+    background: var(--color-surface-offset);
+    color: var(--color-text);
+  }
+  .detail-close svg { width: 14px; height: 14px; }
+  .detail-name {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+    padding-right: var(--space-8);
+  }
+  .detail-body {
+    padding: var(--space-4);
+  }
+  .detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+    font-size: var(--text-sm);
+  }
+  .detail-row:last-child { margin-bottom: 0; }
+  .detail-icon {
+    width: 18px; height: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--color-text-muted);
+  }
+  .detail-row-content { flex: 1; }
+  .detail-row-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+  .detail-row-value { color: var(--color-text); }
+  .detail-row a {
+    color: var(--color-primary);
+    text-decoration: none;
+    word-break: break-all;
+  }
+  .detail-row a:hover { text-decoration: underline; }
+  .detail-actions {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-divider);
+    display: flex;
+    gap: var(--space-2);
+  }
+  .btn-primary {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: background var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+  }
+  .btn-primary:hover { background: var(--color-primary-hover); color: white; }
+  .btn-secondary {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+  .btn-secondary:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--color-primary-highlight);
+  }
+
+  /* Legend */
+  .map-legend {
+    position: absolute;
+    bottom: var(--space-6);
+    left: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+    z-index: 900;
+    box-shadow: var(--shadow-md);
+    min-width: 180px;
+  }
+  .legend-title {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-2);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-1);
+  }
+  .legend-item:last-child { margin-bottom: 0; }
+  .legend-marker {
+    width: 12px; height: 12px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+  .legend-marker.square {
+    border-radius: var(--radius-sm);
+  }
+
+  /* Map controls overlay */
+  .map-controls {
+    position: absolute;
+    top: var(--space-4);
+    left: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    z-index: 900;
+  }
+  .count-badge {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    box-shadow: var(--shadow-sm);
+  }
+  .count-badge span { color: var(--color-primary); }
+
+  /* Leaflet overrides */
+  .leaflet-container {
+    background: var(--map-bg) !important;
+    font-family: var(--font-body) !important;
+  }
+  .leaflet-control-zoom {
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-sm) !important;
+    overflow: hidden;
+  }
+  .leaflet-control-zoom a {
+    background: var(--color-surface) !important;
+    color: var(--color-text-muted) !important;
+    border: none !important;
+    border-bottom: 1px solid var(--color-divider) !important;
+    width: 32px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+  }
+  .leaflet-control-zoom a:last-child { border-bottom: none !important; }
+  .leaflet-control-zoom a:hover {
+    background: var(--color-surface-2) !important;
+    color: var(--color-text) !important;
+  }
+  .leaflet-control-attribution { display: none; }
+  .leaflet-popup-content-wrapper {
+    background: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-lg) !important;
+    padding: 0 !important;
+  }
+  .leaflet-popup-content { margin: 0 !important; }
+  .leaflet-popup-tip { background: var(--color-surface) !important; }
+  .leaflet-popup-close-button { color: var(--color-text-muted) !important; top: 8px !important; right: 8px !important; }
+
+  /* Custom marker */
+  .custom-marker {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .custom-marker:hover { transform: scale(1.15); }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--space-8) var(--space-4);
+    color: var(--color-text-muted);
+  }
+  .empty-state svg { width: 32px; height: 32px; color: var(--color-text-faint); margin-bottom: var(--space-3); }
+  .empty-state p { font-size: var(--text-sm); max-width: 200px; line-height: 1.4; }
+
+  @media (max-width: 768px) {
+    body {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr auto;
+      grid-template-areas: "header" "map" "sidebar";
+    }
+    aside {
+      border-right: none;
+      border-top: 1px solid var(--color-border);
+      max-height: 40vh;
+    }
+    .detail-panel {
+      right: var(--space-2);
+      left: var(--space-2);
+      width: auto;
+      top: auto;
+      bottom: 42vh;
+    }
+    .header-stats { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <svg class="logo-mark" viewBox="0 0 36 36" fill="none" aria-label="Houston Cultural Districts logo">
+      <rect width="36" height="36" rx="8" fill="var(--color-primary)"/>
+      <path d="M8 10h4v7h8v-7h4v16h-4v-6H12v6H8V10z" fill="white" fill-opacity="0.95"/>
+      <circle cx="27" cy="10" r="3" fill="var(--color-gold)" fill-opacity="0.9"/>
+    </svg>
+    <div>
+      <div class="logo-text">Houston Cultural Map</div>
+      <div class="logo-sub">Seven Districts Explorer</div>
+    </div>
+  </div>
+  <div class="header-divider"></div>
+  <div class="header-stats">
+    <div class="stat-pill">
+      <span class="stat-dot" style="background:var(--color-primary)"></span>
+      <strong id="total-count">56</strong>&nbsp;locations
+    </div>
+    <div class="stat-pill">
+      <span class="stat-dot" style="background:var(--color-gold)"></span>
+      <strong>7</strong>&nbsp;cultural districts
+    </div>
+    <div class="stat-pill">
+      <span class="stat-dot" style="background:var(--color-orange)"></span>
+      <strong>400+</strong>&nbsp;artist studios
+    </div>
+    <div class="stat-pill">
+      <span class="stat-dot" style="background:var(--color-blue)"></span>
+      <strong>950+</strong>&nbsp;public art projects
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" data-theme-toggle aria-label="Toggle theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Sidebar -->
+<aside>
+  <div class="sidebar-header">
+    <div class="search-box">
+      <span class="search-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </span>
+      <input type="search" id="search-input" placeholder="Search venues, districts..." autocomplete="off">
+    </div>
+  </div>
+
+  <div class="filter-section">
+    <div class="sidebar-section-title">District</div>
+    <div class="filter-chips" id="district-filters">
+      <div class="chip active" data-filter="district" data-value="all">All</div>
+      <div class="chip" data-filter="district" data-value="Museum District" style="--chip-color: #01696f">
+        <span class="chip-dot" style="background:#01696f"></span>Museum District
+      </div>
+      <div class="chip" data-filter="district" data-value="Arts District Houston" style="--chip-color: #da7101">
+        <span class="chip-dot" style="background:#da7101"></span>Arts District
+      </div>
+      <div class="chip" data-filter="district" data-value="Theater District" style="--chip-color: #7a39bb">
+        <span class="chip-dot" style="background:#7a39bb"></span>Theater District
+      </div>
+      <div class="chip" data-filter="district" data-value="Midtown" style="--chip-color: #d19900">
+        <span class="chip-dot" style="background:#d19900"></span>Midtown
+      </div>
+      <div class="chip" data-filter="district" data-value="Greater East End" style="--chip-color: #006494">
+        <span class="chip-dot" style="background:#006494"></span>East End
+      </div>
+      <div class="chip" data-filter="district" data-value="Third Ward" style="--chip-color: #a13544">
+        <span class="chip-dot" style="background:#a13544"></span>Third Ward
+      </div>
+      <div class="chip" data-filter="district" data-value="Fifth Ward" style="--chip-color: #437a22">
+        <span class="chip-dot" style="background:#437a22"></span>Fifth Ward
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-section">
+    <div class="sidebar-section-title">Asset Type</div>
+    <div class="filter-chips" id="type-filters">
+      <div class="chip active" data-filter="type" data-value="all">All Types</div>
+      <div class="chip" data-filter="type" data-value="Museum">🏛 Museums</div>
+      <div class="chip" data-filter="type" data-value="Gallery">🖼 Galleries</div>
+      <div class="chip" data-filter="type" data-value="Performance">🎭 Performance</div>
+      <div class="chip" data-filter="type" data-value="Artist Studio">🎨 Artist Studios</div>
+      <div class="chip" data-filter="type" data-value="Music Venue">🎵 Music Venues</div>
+      <div class="chip" data-filter="type" data-value="Historic">🏛 Historic</div>
+      <div class="chip" data-filter="type" data-value="Public Art">🗿 Public Art</div>
+      <div class="chip" data-filter="type" data-value="Cultural Center">🌐 Cultural Center</div>
+    </div>
+  </div>
+
+  <div class="filter-section">
+    <div class="sidebar-section-title">Heritage</div>
+    <div class="filter-chips" id="heritage-filters">
+      <div class="chip active" data-filter="heritage" data-value="all">All Heritage</div>
+      <div class="chip" data-filter="heritage" data-value="African American">✊ African American</div>
+      <div class="chip" data-filter="heritage" data-value="Hispanic/Latino">🌮 Hispanic/Latino</div>
+      <div class="chip" data-filter="heritage" data-value="Indigenous">🌿 Indigenous</div>
+      <div class="chip" data-filter="heritage" data-value="Asian">🏮 Asian</div>
+      <div class="chip" data-filter="heritage" data-value="Multicultural">🌍 Multicultural</div>
+    </div>
+  </div>
+
+  <div class="results-list">
+    <div class="results-header">
+      <span id="results-count-label">Showing all locations</span>
+    </div>
+    <div id="results-list-container"></div>
+  </div>
+</aside>
+
+<!-- Map -->
+<div id="map-container">
+  <div id="map"></div>
+  <div class="map-controls">
+    <div class="count-badge">Showing <span id="map-count">56</span> pins</div>
+  </div>
+  <div class="map-legend">
+    <div class="legend-title">Asset Types</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#01696f"></span>Museum</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#da7101"></span>Gallery</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#7a39bb"></span>Performance</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#d19900"></span>Artist Studio</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#006494"></span>Music Venue</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#a13544"></span>Historic</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#437a22"></span>Cultural Center</div>
+    <div class="legend-item"><span class="legend-marker" style="background:#888"></span>Public Art</div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <div class="detail-type-row">
+      <span id="detail-badge" class="result-type-badge"></span>
+      <span id="detail-district" class="result-district" style="margin-bottom:0;font-size:var(--text-xs);color:var(--color-text-muted)"></span>
+    </div>
+    <div class="detail-name" id="detail-name"></div>
+    <button class="detail-close" id="detail-close" aria-label="Close detail">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="detail-body" id="detail-body"></div>
+  <div class="detail-actions" id="detail-actions"></div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const DISTRICTS = {
+  "Museum District":     { color: "#01696f", lat: 29.7231, lng: -95.3901 },
+  "Arts District Houston": { color: "#da7101", lat: 29.7620, lng: -95.3890 },
+  "Theater District":    { color: "#7a39bb", lat: 29.7558, lng: -95.3683 },
+  "Midtown":             { color: "#d19900", lat: 29.7388, lng: -95.3780 },
+  "Greater East End":    { color: "#006494", lat: 29.7395, lng: -95.3278 },
+  "Third Ward":          { color: "#a13544", lat: 29.7190, lng: -95.3630 },
+  "Fifth Ward":          { color: "#437a22", lat: 29.7750, lng: -95.3360 },
+};
+
+const TYPE_COLORS = {
+  "Museum":         "#01696f",
+  "Gallery":        "#da7101",
+  "Performance":    "#7a39bb",
+  "Artist Studio":  "#d19900",
+  "Music Venue":    "#006494",
+  "Historic":       "#a13544",
+  "Cultural Center":"#437a22",
+  "Public Art":     "#888888",
+};
+
+const TYPE_ICONS = {
+  "Museum": "🏛", "Gallery": "🖼", "Performance": "🎭",
+  "Artist Studio": "🎨", "Music Venue": "🎵",
+  "Historic": "🏺", "Cultural Center": "🌐", "Public Art": "🗿"
+};
+
+const locations = [
+  // MUSEUM DISTRICT
+  { id:1, name:"Museum of Fine Arts, Houston", type:"Museum", district:"Museum District", heritage:"Multicultural",
+    lat:29.7256, lng:-95.3901, address:"1001 Bissonnet St", hours:"Tue–Sun 10am–5pm (Thu to 9pm), Mon closed",
+    website:"https://www.mfah.org", events:"https://www.mfah.org/exhibitions",
+    desc:"One of the largest art museums in the US with 70,000+ works spanning 6,000 years." },
+  { id:2, name:"Rothko Chapel", type:"Historic", district:"Museum District", heritage:"Multicultural",
+    lat:29.7336, lng:-95.3966, address:"3900 Yupon St", hours:"Tue–Sun 10am–6pm",
+    website:"https://www.rothkochapel.org", events:"https://rothkochapel.org/programs-events/",
+    desc:"Non-denominational chapel featuring 14 large-scale paintings by Mark Rothko. A global site for contemplation." },
+  { id:3, name:"Miller Outdoor Theatre", type:"Performance", district:"Museum District", heritage:"Multicultural",
+    lat:29.7174, lng:-95.3872, address:"6000 Hermann Park Dr", hours:"Box office: Tue–Sat 11:30am–1:30pm",
+    website:"https://www.milleroutdoortheatre.com", events:"https://milleroutdoortheatre.com/season",
+    desc:"America's only free open-air professional theatre. Free performances May–October in Hermann Park since 1923." },
+  { id:4, name:"Contemporary Arts Museum Houston", type:"Museum", district:"Museum District", heritage:"Multicultural",
+    lat:29.7261, lng:-95.3893, address:"5216 Montrose Blvd", hours:"Tue–Wed, Fri–Sun 10am–5pm; Thu 10am–7pm",
+    website:"https://camh.org", events:"https://camh.org/exhibitions",
+    desc:"Free-admission museum dedicated to showcasing contemporary and emerging artists." },
+  { id:5, name:"Houston Museum of Natural Science", type:"Museum", district:"Museum District", heritage:"Multicultural",
+    lat:29.7223, lng:-95.3894, address:"5555 Hermann Park Dr", hours:"Mon–Sat 9am–5pm, Sun 11am–5pm",
+    website:"https://www.hmns.org", events:"https://www.hmns.org/events",
+    desc:"One of the most visited natural history museums in the US, featuring gems, dinosaurs, and space." },
+  { id:6, name:"Holocaust Museum Houston", type:"Museum", district:"Museum District", heritage:"Multicultural",
+    lat:29.7313, lng:-95.3934, address:"5401 Caroline St", hours:"Tue–Fri 9am–5pm; Sat–Sun 12pm–5pm",
+    website:"https://hmh.org", events:"https://hmh.org/programs",
+    desc:"Dedicated to educating the community about the Holocaust and promoting tolerance." },
+  { id:7, name:"Asia Society Texas Center", type:"Cultural Center", district:"Museum District", heritage:"Asian",
+    lat:29.7312, lng:-95.3892, address:"1370 Southmore Blvd", hours:"Tue–Sun 11am–6pm",
+    website:"https://asiasociety.org/texas", events:"https://asiasociety.org/texas/events",
+    desc:"Cultural bridge between Asia and the Americas. Curated by Renzo Piano–designed building." },
+  { id:8, name:"Menil Collection", type:"Museum", district:"Museum District", heritage:"Multicultural",
+    lat:29.7382, lng:-95.3989, address:"1533 Sul Ross St", hours:"Wed–Sun 11am–7pm, free admission",
+    website:"https://www.menil.org", events:"https://www.menil.org/calendar",
+    desc:"World-class free museum housing the eclectic Menil family collection in the heart of the Museum District." },
+  { id:9, name:"Bayou Bend Collection", type:"Museum", district:"Museum District", heritage:"Multicultural",
+    lat:29.7591, lng:-95.4140, address:"6003 Memorial Dr", hours:"Tue–Sat 10am–5pm",
+    website:"https://www.mfah.org/visit/bayou-bend-collection-and-gardens/", events:"https://www.mfah.org/exhibitions",
+    desc:"Historic house museum containing one of the finest collections of American decorative arts and paintings." },
+  { id:10, name:"Glassell School of Art", type:"Artist Studio", district:"Museum District", heritage:"Multicultural",
+    lat:29.7269, lng:-95.3925, address:"5101 Montrose Blvd", hours:"Mon–Fri 9am–5pm",
+    website:"https://www.mfah.org/learn/glassell-school-art", events:"https://www.mfah.org/learn/glassell-school-art",
+    desc:"MFAH's art school offering adult and youth studio programs; home to the prestigious Core Residency program." },
+
+  // ARTS DISTRICT HOUSTON
+  { id:11, name:"Sawyer Yards Creative Campus", type:"Artist Studio", district:"Arts District Houston", heritage:"Multicultural",
+    lat:29.7636, lng:-95.3933, address:"2505 N. Houston Ave", hours:"Mon–Sat 9am–5pm (buildings open to public)",
+    website:"https://www.sawyeryards.com", events:"https://www.sawyeryards.com/events",
+    desc:"Nation's largest creative campus — 300+ working artist studios in converted warehouses in the First Ward." },
+  { id:12, name:"Winter Street Studios", type:"Artist Studio", district:"Arts District Houston", heritage:"Multicultural",
+    lat:29.7618, lng:-95.3902, address:"2101 Winter St", hours:"Mon–Sat 9am–5pm",
+    website:"https://www.winterstreetstudios.com", events:"https://www.winterstreetstudios.com/events",
+    desc:"Former ice house converted into artist studios and galleries in the heart of the First Ward." },
+  { id:13, name:"Lawndale Art Center", type:"Gallery", district:"Arts District Houston", heritage:"Multicultural",
+    lat:29.7507, lng:-95.3886, address:"4912 Main St", hours:"Tue–Sat 10am–5pm",
+    website:"https://www.lawndaleartcenter.org", events:"https://lawndaleartcenter.org/events",
+    desc:"A leading nonprofit dedicated to advancing the careers of visual artists with exhibitions and residencies." },
+  { id:14, name:"Silver Street Studios", type:"Artist Studio", district:"Arts District Houston", heritage:"Multicultural",
+    lat:29.7631, lng:-95.3922, address:"2000 Edwards St", hours:"Mon–Sat 9am–5pm",
+    website:"https://silverstreethouston.com", events:"https://silverstreethouston.com/events",
+    desc:"Artist studios and workspace complex near Sawyer Yards — part of Houston's thriving Arts District." },
+  { id:15, name:"Box 13 Artspace", type:"Gallery", district:"Arts District Houston", heritage:"Multicultural",
+    lat:29.7558, lng:-95.3881, address:"4903-A Caroline St", hours:"Thu–Sun 12pm–5pm",
+    website:"https://www.box13artspace.com", events:"https://www.box13artspace.com/events",
+    desc:"Non-profit artist-run contemporary art space providing residencies and exhibition opportunities." },
+  { id:16, name:"Houston Center for Photography", type:"Gallery", district:"Arts District Houston", heritage:"Multicultural",
+    lat:29.7381, lng:-95.3984, address:"1441 W Alabama St", hours:"Wed–Fri 11am–5pm; Sat–Sun 11am–4pm",
+    website:"https://www.hcponline.org", events:"https://www.hcponline.org/exhibitions",
+    desc:"Dedicated to photography as a fine art. Exhibitions, educational programming, and artist support." },
+
+  // THEATER DISTRICT
+  { id:17, name:"Alley Theatre", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7559, lng:-95.3677, address:"615 Texas Ave", hours:"Box office: Tue–Sat 12pm–6pm",
+    website:"https://www.alleytheatre.org", events:"https://www.alleytheatre.org/season",
+    desc:"Tony Award-winning regional theatre producing world premieres in downtown Houston since 1947." },
+  { id:18, name:"Houston Grand Opera", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7565, lng:-95.3665, address:"500 Texas Ave", hours:"Box office: Mon–Sat 10am–6pm",
+    website:"https://www.houstongrandopera.org", events:"https://www.houstongrandopera.org/season",
+    desc:"One of the largest and most celebrated opera companies in North America. Winner of 4 Tony Awards." },
+  { id:19, name:"Houston Symphony", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7555, lng:-95.3658, address:"615 Louisiana St, Jones Hall", hours:"Box office: Mon–Sat 10am–5pm",
+    website:"https://www.houstonsymphony.org", events:"https://www.houstonsymphony.org/season",
+    desc:"Premier orchestral institution of the Southwest, performing at Jones Hall for the Performing Arts." },
+  { id:20, name:"Houston Ballet", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7566, lng:-95.3675, address:"615 Texas Ave, Wortham Theater Center", hours:"Box office: Tue–Sat 10am–6pm",
+    website:"https://www.houstonballet.org", events:"https://www.houstonballet.org/season",
+    desc:"One of the top five ballet companies in the US, known for innovative programming and training." },
+  { id:21, name:"Wortham Theater Center", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7566, lng:-95.3675, address:"501 Texas Ave", hours:"Box office Tue–Sat 10am–6pm",
+    website:"https://www.houstonfirsttheaters.com/venues/wortham-theater-center/", events:"https://www.houstonfirsttheaters.com",
+    desc:"Houston's premier performing arts venue housing two theaters and hosting opera, ballet, and more." },
+  { id:22, name:"Jones Hall", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7557, lng:-95.3652, address:"615 Louisiana St", hours:"Box office Mon–Sat 10am–5pm",
+    website:"https://www.houstonfirsttheaters.com/venues/jones-hall/", events:"https://www.houstonfirsttheaters.com",
+    desc:"Premier Houston concert hall and home of the Houston Symphony, seating 2,900 guests." },
+  { id:23, name:"Hobby Center for the Performing Arts", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7573, lng:-95.3647, address:"800 Bagby St", hours:"Box office Mon–Fri 10am–5pm",
+    website:"https://www.thehobbycenter.org", events:"https://www.thehobbycenter.org/events",
+    desc:"Two-theater complex hosting Broadway touring productions and local performing arts companies." },
+  { id:24, name:"Stages Theatre", type:"Performance", district:"Theater District", heritage:"Multicultural",
+    lat:29.7590, lng:-95.3710, address:"800 Jackson St", hours:"Box office Mon–Fri 10am–5pm",
+    website:"https://www.stagestheatre.org", events:"https://www.stagestheatre.org/season",
+    desc:"Award-winning intimate theatre producing adventurous works from Broadway hits to world premieres." },
+
+  // MIDTOWN
+  { id:25, name:"Project Row Houses", type:"Cultural Center", district:"Third Ward", heritage:"African American",
+    lat:29.7395, lng:-95.3524, address:"2521 Holman St", hours:"Wed–Sat 12pm–5pm",
+    website:"https://projectrowhouses.org", events:"https://projectrowhouses.org/events",
+    desc:"Artist-conceived non-profit celebrating African American art, culture, and community in the Third Ward." },
+  { id:26, name:"Midtown Arts & Theater Center Houston", type:"Performance", district:"Midtown", heritage:"Multicultural",
+    lat:29.7412, lng:-95.3729, address:"3400 Main St", hours:"Box office Mon–Fri 12pm–6pm",
+    website:"https://www.match.org", events:"https://www.match.org/calendar",
+    desc:"State-of-the-art performing arts venue with four stages presenting diverse Houston cultural organizations." },
+  { id:27, name:"DiverseWorks", type:"Gallery", district:"Midtown", heritage:"Multicultural",
+    lat:29.7430, lng:-95.3741, address:"1117 E Freeway, #200", hours:"Wed–Sat 12pm–5pm",
+    website:"https://diverseworks.org", events:"https://diverseworks.org/events",
+    desc:"Presenting experimental and interdisciplinary work by local, national, and international artists." },
+  { id:28, name:"Houston Tex-Jazz Heritage Society", type:"Cultural Center", district:"Midtown", heritage:"African American",
+    lat:29.7405, lng:-95.3762, address:"4410 Almeda Rd", hours:"By appointment",
+    website:"https://www.texjazz.org", events:"https://www.texjazz.org/events",
+    desc:"Dedicated to preserving Houston's rich jazz heritage, particularly in African American communities." },
+  { id:29, name:"Pub Fiction", type:"Music Venue", district:"Midtown", heritage:"Multicultural",
+    lat:29.7421, lng:-95.3745, address:"2303 Smith St", hours:"Mon–Sun 4pm–2am",
+    website:"https://pubfictionhouston.com", events:"https://pubfictionhouston.com/events",
+    desc:"Local music venue and bar in Midtown featuring live performances and DJ nights." },
+  { id:30, name:"Market Square Park (Public Art)", type:"Public Art", district:"Theater District", heritage:"Multicultural",
+    lat:29.7536, lng:-95.3633, address:"301 Milam St", hours:"Daily, dawn to dusk",
+    website:"https://marketsquarepark.com", events:"https://marketsquarepark.com/events",
+    desc:"Historic downtown park featuring rotating public art installations and community events." },
+
+  // GREATER EAST END
+  { id:31, name:"East End Cultural District Hub", type:"Cultural Center", district:"Greater East End", heritage:"Hispanic/Latino",
+    lat:29.7395, lng:-95.3278, address:"7500 Harrisburg Blvd", hours:"Mon–Fri 9am–5pm",
+    website:"https://eastendhouston.com", events:"https://eastendhouston.com/events",
+    desc:"Cultural heart of Houston's historically Latino East End, connecting community to arts programming." },
+  { id:32, name:"The Gallery at Warehouse 72", type:"Gallery", district:"Greater East End", heritage:"Hispanic/Latino",
+    lat:29.7382, lng:-95.3263, address:"8405 Navigation Blvd", hours:"Sat–Sun 11am–5pm",
+    website:"https://warehouse72.com", events:"https://warehouse72.com/events",
+    desc:"Gallery and creative space amplifying Latino/Hispanic and local Houston artists in the East End." },
+  { id:33, name:"Houston Mural Trail – Navigation Blvd", type:"Public Art", district:"Greater East End", heritage:"Hispanic/Latino",
+    lat:29.7371, lng:-95.3311, address:"Navigation Blvd corridor", hours:"Always open",
+    website:"https://houstonmuralmap.com", events:"https://houstonmuralmap.com",
+    desc:"Iconic mural corridor celebrating Houston's Latino heritage, spanning multiple blocks of Navigation Blvd." },
+  { id:34, name:"Talento Bilingue de Houston", type:"Performance", district:"Greater East End", heritage:"Hispanic/Latino",
+    lat:29.7415, lng:-95.3290, address:"333 S. Jensen Dr", hours:"Mon–Fri 9am–5pm",
+    website:"https://www.tbhcultura.org", events:"https://www.tbhcultura.org/events",
+    desc:"50+ year old bilingual arts organization celebrating Latino and Hispanic heritage through theater and education." },
+  { id:35, name:"Houston Tex Mex Corridor Public Art", type:"Public Art", district:"Greater East End", heritage:"Hispanic/Latino",
+    lat:29.7348, lng:-95.3299, address:"Harrisburg Blvd", hours:"Always open",
+    website:"https://eastendhouston.com", events:"https://eastendhouston.com",
+    desc:"Public art installations along Harrisburg Blvd celebrating the cultural identity of East End Houston." },
+  { id:36, name:"MATCH East End", type:"Performance", district:"Greater East End", heritage:"Hispanic/Latino",
+    lat:29.7425, lng:-95.3248, address:"3201 Allen Pkwy", hours:"Varies by event",
+    website:"https://www.match.org", events:"https://www.match.org/calendar",
+    desc:"Satellite MATCH programming bringing Midtown's multicultural performing arts to East End communities." },
+
+  // THIRD WARD
+  { id:37, name:"The Ensemble Theatre", type:"Performance", district:"Third Ward", heritage:"African American",
+    lat:29.7493, lng:-95.3733, address:"3535 Main St", hours:"Box office Mon–Fri 10am–5pm",
+    website:"https://www.ensemblehouston.com", events:"https://www.ensemblehouston.com/season",
+    desc:"Oldest and largest African American theatre in the Southwest, committed to the preservation of Black culture." },
+  { id:38, name:"Texas Southern University – Museum", type:"Museum", district:"Third Ward", heritage:"African American",
+    lat:29.7218, lng:-95.3560, address:"3100 Cleburne St", hours:"Mon–Fri 9am–5pm",
+    website:"https://www.tsu.edu/museum", events:"https://www.tsu.edu/museum",
+    desc:"HBCU museum celebrating African American history, art, and culture serving the Third Ward community." },
+  { id:39, name:"Emancipation Park", type:"Historic", district:"Third Ward", heritage:"African American",
+    lat:29.7260, lng:-95.3618, address:"3018 Dowling St", hours:"Daily 5am–11pm",
+    website:"https://www.houstontx.gov/parks/emancipationpark.html", events:"https://www.houstontx.gov/parks",
+    desc:"Historic park purchased in 1872 by freed slaves to celebrate Juneteenth — a landmark of Black freedom in Texas." },
+  { id:40, name:"Buffalo Soldiers National Museum", type:"Museum", district:"Third Ward", heritage:"African American",
+    lat:29.7268, lng:-95.3719, address:"3816 Caroline St", hours:"Mon–Fri 10am–5pm; Sat 10am–4pm",
+    website:"https://www.buffalosoldiermuseum.com", events:"https://www.buffalosoldiermuseum.com/events",
+    desc:"Dedicated to preserving the legacy of African American military history, particularly the Buffalo Soldiers." },
+  { id:41, name:"Studio 3311 – Artists Collective", type:"Artist Studio", district:"Third Ward", heritage:"African American",
+    lat:29.7282, lng:-95.3641, address:"3311 Elgin St", hours:"Sat–Sun 12pm–5pm",
+    website:"https://studio3311.com", events:"https://studio3311.com/events",
+    desc:"Community art studio and gallery supporting Black artists and creatives in Houston's Third Ward." },
+  { id:42, name:"Cactus Music", type:"Music Venue", district:"Midtown", heritage:"Multicultural",
+    lat:29.7440, lng:-95.3757, address:"2110 Portsmouth St", hours:"Mon–Sat 10am–8pm, Sun 12pm–6pm",
+    website:"https://cactusmusic.com", events:"https://cactusmusic.com/events",
+    desc:"Houston's beloved independent record store and live music venue, a cultural institution since 1975." },
+
+  // FIFTH WARD
+  { id:43, name:"Fifth Ward Community Center for Arts", type:"Cultural Center", district:"Fifth Ward", heritage:"African American",
+    lat:29.7795, lng:-95.3309, address:"3811 Lyons Ave", hours:"Mon–Fri 9am–5pm",
+    website:"https://fifthwardhouston.com", events:"https://fifthwardhouston.com/events",
+    desc:"Arts and culture hub in the historically Black Fifth Ward, hosting exhibitions, workshops, and performances." },
+  { id:44, name:"The 5th Ward Jam", type:"Music Venue", district:"Fifth Ward", heritage:"African American",
+    lat:29.7768, lng:-95.3322, address:"4200 Lyons Ave", hours:"Thu–Sun 6pm–midnight",
+    website:"https://5thwardjam.com", events:"https://5thwardjam.com/events",
+    desc:"Legendary music spot in the Fifth Ward celebrating Houston's blues, gospel, and R&B heritage." },
+  { id:45, name:"Lyons Ave Mural Walk", type:"Public Art", district:"Fifth Ward", heritage:"African American",
+    lat:29.7751, lng:-95.3347, address:"3800–4200 block Lyons Ave", hours:"Always open",
+    website:"https://fifthwardhouston.com", events:"https://fifthwardhouston.com",
+    desc:"A corridor of vibrant murals along Lyons Ave celebrating Fifth Ward's African American history and community." },
+  { id:46, name:"Project Row Houses (North)", type:"Cultural Center", district:"Fifth Ward", heritage:"African American",
+    lat:29.7730, lng:-95.3365, address:"2803 Holman St (satellite)", hours:"Wed–Sat 12pm–5pm",
+    website:"https://projectrowhouses.org", events:"https://projectrowhouses.org/events",
+    desc:"Fifth Ward satellite of the nationally recognized community arts organization rooted in African American culture." },
+
+  // ADDITIONAL LANDMARKS ACROSS DISTRICTS
+  { id:47, name:"Blaffer Art Museum (UH)", type:"Museum", district:"Third Ward", heritage:"Multicultural",
+    lat:29.7198, lng:-95.3430, address:"4173 Elgin St, UH Campus", hours:"Tue–Sat 10am–5pm, free admission",
+    website:"https://blafferartmuseum.org", events:"https://blafferartmuseum.org/exhibitions",
+    desc:"Free contemporary art museum on the University of Houston campus emphasizing emerging artists." },
+  { id:48, name:"Houston Center for Contemporary Craft", type:"Gallery", district:"Museum District", heritage:"Multicultural",
+    lat:29.7315, lng:-95.3952, address:"4848 Main St", hours:"Tue–Sat 10am–5pm, free admission",
+    website:"https://crafthouston.org", events:"https://crafthouston.org/exhibitions",
+    desc:"Dedicated to advancing craft as a fine art through exhibitions, artist residencies, and education." },
+  { id:49, name:"Aurora Picture Show", type:"Performance", district:"Arts District Houston", heritage:"Multicultural",
+    lat:29.7612, lng:-95.3845, address:"2442 Bartlett St", hours:"Varies by screening",
+    website:"https://aurorapictureshow.org", events:"https://aurorapictureshow.org/calendar",
+    desc:"Microcinema dedicated to experimental film and video art housed in a converted church." },
+  { id:50, name:"Guadalupe Cultural Arts Center (Houston)", type:"Cultural Center", district:"Greater East End", heritage:"Hispanic/Latino",
+    lat:29.7360, lng:-95.3255, address:"5100 Harrisburg Blvd", hours:"Mon–Fri 9am–5pm",
+    website:"https://guadalupeculturalarts.org", events:"https://guadalupeculturalarts.org/events",
+    desc:"Celebrating Mexican, Latino and Indigenous heritage through art exhibitions, performing arts, and literature." },
+  { id:51, name:"Houston's Indigenous Art Walk", type:"Public Art", district:"Museum District", heritage:"Indigenous",
+    lat:29.7285, lng:-95.3855, address:"Hermann Park area", hours:"Always open",
+    website:"https://www.hmns.org/explore/native-peoples-of-the-americas/", events:"https://www.hmns.org",
+    desc:"A series of installations and exhibits honoring the Indigenous peoples of the Gulf Coast and Texas Plains." },
+  { id:52, name:"Orange Show Center for Visionary Art", type:"Gallery", district:"Greater East End", heritage:"Multicultural",
+    lat:29.7178, lng:-95.3285, address:"2401 Munger St", hours:"Thu–Sun 12pm–5pm (seasonal)",
+    website:"https://orangeshow.org", events:"https://orangeshow.org/events",
+    desc:"Folk art environment and Houston arts institution showcasing visionary and outsider art." },
+  { id:53, name:"DaNang Coffee & Arts", type:"Cultural Center", district:"Greater East End", heritage:"Asian",
+    lat:29.7390, lng:-95.3200, address:"9600 Bellaire Blvd (Chinatown area)", hours:"Mon–Sun 8am–9pm",
+    website:"https://danangcoffee.com", events:"https://danangcoffee.com/events",
+    desc:"Community arts space serving Houston's vibrant Vietnamese community — blending café culture with art exhibitions." },
+  { id:54, name:"WHAM! (Women's Houston Area Music)", type:"Music Venue", district:"Midtown", heritage:"Multicultural",
+    lat:29.7428, lng:-95.3780, address:"2616 Louisiana St", hours:"Fri–Sat 7pm–2am",
+    website:"https://whamhouston.com", events:"https://whamhouston.com/calendar",
+    desc:"Celebrating women in music with live performances, open mics, and community programming in Midtown." },
+  { id:55, name:"Houston Public Library – HATCH", type:"Cultural Center", district:"Fifth Ward", heritage:"African American",
+    lat:29.7775, lng:-95.3389, address:"4000 Lyons Ave", hours:"Mon–Sat 10am–6pm",
+    website:"https://houstonlibrary.org/location/hatch-library", events:"https://houstonlibrary.org/events",
+    desc:"Community arts-focused library branch serving the Fifth Ward with creative programs and exhibitions." },
+  { id:56, name:"The Byzantine Fresco Chapel Museum", type:"Historic", district:"Museum District", heritage:"Multicultural",
+    lat:29.7390, lng:-95.3978, address:"4011 Yupon St", hours:"Fri–Sun 11am–6pm (by appointment)",
+    website:"https://www.menil.org/visit/byzantine-fresco-chapel/", events:"https://www.menil.org/calendar",
+    desc:"A jewel of the Menil campus housing rare 13th-century Byzantine frescoes repatriated to Cyprus." },
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let activeDistrict = "all";
+let activeType = "all";
+let activeHeritage = "all";
+let searchQuery = "";
+let selectedId = null;
+let markers = {};
+
+// ─── MAP INIT ────────────────────────────────────────────────────────────────
+const isDark = () => document.documentElement.getAttribute("data-theme") === "dark";
+
+const lightTiles = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const darkTiles  = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+
+const map = L.map("map", {
+  center: [29.7412, -95.3601],
+  zoom: 13,
+  zoomControl: true,
+});
+
+let tileLayer = L.tileLayer(isDark() ? darkTiles : lightTiles, {
+  maxZoom: 19,
+  attribution: "© CartoDB"
+}).addTo(map);
+
+function updateMapTiles() {
+  tileLayer.setUrl(isDark() ? darkTiles : lightTiles);
+}
+
+// ─── MARKER CREATION ─────────────────────────────────────────────────────────
+function createMarkerIcon(loc) {
+  const color = TYPE_COLORS[loc.type] || "#888";
+  const icon = TYPE_ICONS[loc.type] || "📍";
+  return L.divIcon({
+    className: "",
+    html: `<div class="custom-marker" style="background:${color};border-color:rgba(255,255,255,0.4);" title="${loc.name}">${icon}</div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -18]
+  });
+}
+
+function addMarkers() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+  const filtered = getFiltered();
+  filtered.forEach(loc => {
+    const m = L.marker([loc.lat, loc.lng], { icon: createMarkerIcon(loc) }).addTo(map);
+    m.on("click", () => selectLocation(loc.id));
+    markers[loc.id] = m;
+  });
+  document.getElementById("map-count").textContent = filtered.length;
+  document.getElementById("total-count").textContent = filtered.length;
+}
+
+// ─── FILTERING ───────────────────────────────────────────────────────────────
+function getFiltered() {
+  return locations.filter(loc => {
+    const matchDist = activeDistrict === "all" || loc.district === activeDistrict;
+    const matchType = activeType === "all" || loc.type === activeType;
+    const matchHeritage = activeHeritage === "all" || loc.heritage === activeHeritage;
+    const matchSearch = !searchQuery || 
+      loc.name.toLowerCase().includes(searchQuery) ||
+      loc.district.toLowerCase().includes(searchQuery) ||
+      loc.type.toLowerCase().includes(searchQuery) ||
+      (loc.desc || "").toLowerCase().includes(searchQuery);
+    return matchDist && matchType && matchHeritage && matchSearch;
+  });
+}
+
+// ─── RESULTS LIST ────────────────────────────────────────────────────────────
+function renderList() {
+  const filtered = getFiltered();
+  const container = document.getElementById("results-list-container");
+  document.getElementById("results-count-label").textContent = 
+    `Showing ${filtered.length} of ${locations.length} locations`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <p>No locations match your filters. Try adjusting your search.</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(loc => {
+    const distColor = DISTRICTS[loc.district]?.color || "#888";
+    const typeColor = TYPE_COLORS[loc.type] || "#888";
+    const isSelected = loc.id === selectedId;
+    return `<div class="result-card ${isSelected ? "selected" : ""}" data-id="${loc.id}" onclick="selectLocation(${loc.id})">
+      <div class="result-card-header">
+        <div class="result-name">${loc.name}</div>
+        <span class="result-type-badge" style="background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44">${TYPE_ICONS[loc.type] || ""} ${loc.type}</span>
+      </div>
+      <div class="result-district">
+        <span class="result-district-dot" style="background:${distColor}"></span>
+        ${loc.district}
+      </div>
+      <div class="result-meta">${loc.address}</div>
+    </div>`;
+  }).join("");
+}
+
+// ─── DETAIL PANEL ────────────────────────────────────────────────────────────
+function selectLocation(id) {
+  selectedId = id;
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+
+  renderList();
+
+  const distColor = DISTRICTS[loc.district]?.color || "#888";
+  const typeColor = TYPE_COLORS[loc.type] || "#888";
+
+  document.getElementById("detail-name").textContent = loc.name;
+  document.getElementById("detail-badge").textContent = `${TYPE_ICONS[loc.type] || ""} ${loc.type}`;
+  document.getElementById("detail-badge").style.cssText = 
+    `background:${typeColor}22;color:${typeColor};border:1px solid ${typeColor}44;font-size:var(--text-xs);font-weight:600;padding:2px 10px;border-radius:var(--radius-full);`;
+  document.getElementById("detail-district").innerHTML = 
+    `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${distColor};margin-right:4px;"></span>${loc.district}`;
+
+  document.getElementById("detail-body").innerHTML = `
+    ${loc.desc ? `<div class="detail-row">
+      <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+      <div class="detail-row-content"><div class="detail-row-value" style="font-size:var(--text-xs);color:var(--color-text-muted);line-height:1.5">${loc.desc}</div></div>
+    </div>` : ""}
+    <div class="detail-row">
+      <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z"/></svg>
+      <div class="detail-row-content">
+        <div class="detail-row-label">Address</div>
+        <div class="detail-row-value">${loc.address}</div>
+      </div>
+    </div>
+    ${loc.hours ? `<div class="detail-row">
+      <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <div class="detail-row-content">
+        <div class="detail-row-label">Hours</div>
+        <div class="detail-row-value">${loc.hours}</div>
+      </div>
+    </div>` : ""}
+    <div class="detail-row">
+      <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253"/></svg>
+      <div class="detail-row-content">
+        <div class="detail-row-label">Website</div>
+        <div class="detail-row-value"><a href="${loc.website}" target="_blank" rel="noopener noreferrer">${loc.website.replace("https://","").replace("http://","")}</a></div>
+      </div>
+    </div>
+    ${loc.heritage && loc.heritage !== "Multicultural" ? `<div class="detail-row">
+      <svg class="detail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21"/></svg>
+      <div class="detail-row-content">
+        <div class="detail-row-label">Heritage Focus</div>
+        <div class="detail-row-value">${loc.heritage}</div>
+      </div>
+    </div>` : ""}
+  `;
+
+  document.getElementById("detail-actions").innerHTML = `
+    <a href="${loc.website}" target="_blank" rel="noopener noreferrer" class="btn-primary">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Visit Website
+    </a>
+    ${loc.events ? `<a href="${loc.events}" target="_blank" rel="noopener noreferrer" class="btn-secondary">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Events
+    </a>` : ""}
+  `;
+
+  const panel = document.getElementById("detail-panel");
+  panel.classList.add("visible");
+
+  map.flyTo([loc.lat, loc.lng], 15, { duration: 0.8 });
+}
+
+document.getElementById("detail-close").addEventListener("click", () => {
+  document.getElementById("detail-panel").classList.remove("visible");
+  selectedId = null;
+  renderList();
+});
+
+// ─── FILTER LOGIC ────────────────────────────────────────────────────────────
+function setupFilters(groupId, stateKey) {
+  document.getElementById(groupId).addEventListener("click", e => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    document.querySelectorAll(`#${groupId} .chip`).forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    if (stateKey === "district") activeDistrict = chip.dataset.value;
+    if (stateKey === "type") activeType = chip.dataset.value;
+    if (stateKey === "heritage") activeHeritage = chip.dataset.value;
+    refresh();
+  });
+}
+
+setupFilters("district-filters", "district");
+setupFilters("type-filters", "type");
+setupFilters("heritage-filters", "heritage");
+
+document.getElementById("search-input").addEventListener("input", e => {
+  searchQuery = e.target.value.toLowerCase().trim();
+  refresh();
+});
+
+function refresh() {
+  addMarkers();
+  renderList();
+}
+
+// ─── THEME TOGGLE ────────────────────────────────────────────────────────────
+(function(){
+  const t = document.querySelector("[data-theme-toggle]");
+  const r = document.documentElement;
+  let d = matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light";
+  r.setAttribute("data-theme", d);
+  updateMapTiles();
+  function updateIcon() {
+    if (!t) return;
+    t.innerHTML = d === "dark"
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  }
+  updateIcon();
+  if (t) t.addEventListener("click", () => {
+    d = d === "dark" ? "light" : "dark";
+    r.setAttribute("data-theme", d);
+    updateMapTiles();
+    updateIcon();
+  });
+})();
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+addMarkers();
+renderList();
+
+// Resize map on layout changes
+window.addEventListener("resize", () => map.invalidateSize());
+setTimeout(() => map.invalidateSize(), 200);
+</script>
+</body>
+</html>
